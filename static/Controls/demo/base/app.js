@@ -43,6 +43,8 @@
             $scope.setTimestamps("timer")
             Update();
         }
+
+        
         $scope.setTimestamps = function (type) {
             var dt = new Date();
             var buttons = $scope.data.control_interface;
@@ -73,7 +75,31 @@
         $scope.pieData = {
             series: [20, 10, 30, 40]
         };
-
+        temp_adjust = function (temp) {
+            temp = Math.floor(temp);
+            if (temp > 61 && temp < 85)
+            {
+                if (temp % 2 == 0)
+                    return(temp+1)
+            }
+            else if (temp < 61) {
+                if (temp > 59)
+                    return (61)
+                else if (temp < 58 && temp > 56)
+                    return (58)
+                else
+                    return (54)
+            }
+            else if (temp > 85)
+            {
+                if (temp < 87)
+                    return (85)
+                else if (temp > 85 && temp < 91)
+                    return (88)
+                else
+                    return(92)
+            }
+        }
         var Get = function () {
 
             $http({
@@ -87,18 +113,20 @@
                     console.log("response data",response.data);
                     $scope.data = response.data;
                     $scope.temperature = {};
-                    $scope.temperature.inside = $scope.data.sensors[0].current;
-                    $scope.temperature.outside = $scope.data.sensors[0].current;
+                    $scope.current = temp_adjust($scope.data.sensors[0].current)
+                    $scope.setpoint = temp_adjust($scope.data.sensors[0].setpoint)
+                    $scope.temperature.inside = $scope.current;
+                    $scope.temperature.outside = $scope.current;
                     var lights = $('.light');
                     lights.each(function () {
                         $(this).removeClass(['heating', 'cooling', 'setpoint']);
                     });
-                    if ($scope.data.sensors[0].current != $scope.data.sensors[0].setpoint) {
-                        $('#' + $scope.data.sensors[0].current).addClass($scope.data.sensors[0].action)
-                        $('#' + $scope.data.sensors[0].setpoint).addClass('setpoint');
+                    if ($scope.current != $scope.setpoint) {
+                        $('#' + $scope.current).addClass($scope.data.sensors[0].action)
+                        $('#' + $scope.setpoint).addClass('setpoint');
                     }
                     else {
-                        $('#' + $scope.data.sensors[0].setpoint).addClass('setpoint');
+                        $('#' + $scope.setpoint).addClass('setpoint');
                     }
 
                     for (var i = 0; i < $scope.data.status.length; i++) {
@@ -117,8 +145,14 @@
                 );
         }
         Get();
-        setInterval(Update, 10000);
-        setInterval($scope.setTimestamps, 1000);
+        $timeout(function () {
+            Update();
+        }.bind(this), 10000);
+        $timeout(function () {
+            $scope.setTimestamps();
+        }.bind(this), 1000);
+        //setInterval(Update, 10000);
+        //setInterval($scope.setTimestamps, 1000);
         //setInterval(Update($scope.data), 10000);
     }
     
