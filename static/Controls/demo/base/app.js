@@ -3,46 +3,109 @@
 
     var AppController = function ($http, $scope, $timeout) {
         var self = this;
+        var temp_adjust = function (temp) {
+            temp = Math.floor(temp);
+            console.log("temp", temp);
+            if (temp > 61 && temp < 85) {
+                if (temp % 2 == 0) {
+                    console.log("temp+1", (temp + 1));
+                    return (temp + 1);
+                }
+                else
+                    return temp;
+            }
+            else if (temp < 61) {
+                if (temp > 59)
+                    return (61);
+                else if (temp < 58 && temp > 56)
+                    return (58);
+                else
+                    return (54);
+            }
+            else if (temp > 85) {
+                if (temp < 87)
+                    return (85);
+                else if (temp > 85 && temp < 91)
+                    return (88);
+                else
+                    return (92);
+            }
+        };
         var Update = function () {
-            console.log("therm",$scope.data);
+            console.log("therm", $scope.data);
             $http({
                 method: 'POST',
-                url:'/sim',
+                url: '/sim',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 data: $scope.data
             }).then(
                 function (response) {
+                    console.log("response data", response.data);
                     $scope.data = response.data;
+                    $scope.temperature = {};
+                    $scope.current = temp_adjust($scope.data.sensors[0].current);
+                    $scope.setpoint = temp_adjust($scope.data.sensors[0].setpoint);
+                    console.log("current", $scope.current);
+                    console.log("setpoint", $scope.setpoint);
+                    $scope.temperature.inside = $scope.current;
+                    $scope.temperature.outside = $scope.current;
+                    var lights = $('.light');
+                    lights.each(function () {
+                        $(this).removeClass("heating cooling setpoint");
+                    });
+                    if ($scope.current != $scope.setpoint) {
+                        $('#' + $scope.current).addClass($scope.data.sensors[0].action);
+                        $('#' + $scope.setpoint).addClass('setpoint');
+                        console.log("not same");
+                    }
+                    else {
+                        $('#' + $scope.setpoint).addClass('setpoint');
+                        console.log("same");
+                    }
+
+                    for (var i = 0; i < $scope.data.status.length; i++) {
+                        if ($scope.data.status[i].type == "eco") {
+                            if ($scope.data.status[i].level == 100) {
+                                $('#eco').removeClass(['active', 'inactive']);
+                                $('#eco').addClass('active');
+                            }
+                            else {
+                                $('#eco').removeClass(['active', 'inactive']);
+                                $('#eco').addClass('inactive');
+                            }
+                        }
+                    }
+
                 }
-            );
-        }
-        $scope.down = function() {
+                );
+        };
+        $scope.down = function () {
             console.log('down');
-            $scope.setTimestamps("heating")
+            $scope.setTimestamps("heating");
             Update();
-        }
-        $scope.up = function() {
+        };
+        $scope.up = function () {
             console.log('up');
-            $scope.setTimestamps("cooling")
+            $scope.setTimestamps("cooling");
             Update();
-        }
-        $scope.power = function() {
+        };
+        $scope.power = function () {
             console.log('power');
-            $scope.setTimestamps("power")
+            $scope.setTimestamps("power");
             Update();
-        }
-        $scope.eco = function() {
+        };
+        $scope.eco = function () {
             console.log('eco');
-            $scope.setTimestamps("eco")
+            $scope.setTimestamps("eco");
             Update();
-        }
-        $scope.timer = function() {
+        };
+        $scope.timer = function () {
             console.log('timer');
-            $scope.setTimestamps("timer")
+            $scope.setTimestamps("timer");
             Update();
-        }
+        };
 
         
         $scope.setTimestamps = function (type) {
@@ -54,7 +117,7 @@
                     $scope.data.control_interface[i].taps_since_last_post.push(dt.toUTCString());
                 }
             }
-        }
+        };
         $timeout(function () {
             console.log('load data');
 
@@ -75,31 +138,7 @@
         $scope.pieData = {
             series: [20, 10, 30, 40]
         };
-        temp_adjust = function (temp) {
-            temp = Math.floor(temp);
-            if (temp > 61 && temp < 85)
-            {
-                if (temp % 2 == 0)
-                    return(temp+1)
-            }
-            else if (temp < 61) {
-                if (temp > 59)
-                    return (61)
-                else if (temp < 58 && temp > 56)
-                    return (58)
-                else
-                    return (54)
-            }
-            else if (temp > 85)
-            {
-                if (temp < 87)
-                    return (85)
-                else if (temp > 85 && temp < 91)
-                    return (88)
-                else
-                    return(92)
-            }
-        }
+        
         var Get = function () {
 
             $http({
@@ -110,19 +149,21 @@
                 },
             }).then(
                 function (response) {
-                    console.log("response data",response.data);
+                    console.log("response data", response.data);
                     $scope.data = response.data;
                     $scope.temperature = {};
-                    $scope.current = temp_adjust($scope.data.sensors[0].current)
-                    $scope.setpoint = temp_adjust($scope.data.sensors[0].setpoint)
+                    $scope.current = temp_adjust($scope.data.sensors[0].current);
+                    $scope.setpoint = temp_adjust($scope.data.sensors[0].setpoint);
+                    console.log("current", $scope.current);
+                    console.log("setpoint", $scope.setpoint);
                     $scope.temperature.inside = $scope.current;
                     $scope.temperature.outside = $scope.current;
                     var lights = $('.light');
                     lights.each(function () {
-                        $(this).removeClass(['heating', 'cooling', 'setpoint']);
+                        $(this).removeClass("heating cooling setpoint");
                     });
                     if ($scope.current != $scope.setpoint) {
-                        $('#' + $scope.current).addClass($scope.data.sensors[0].action)
+                        $('#' + $scope.current).addClass($scope.data.sensors[0].action);
                         $('#' + $scope.setpoint).addClass('setpoint');
                     }
                     else {
@@ -143,8 +184,9 @@
                     }
                 }
                 );
-        }
+        };
         Get();
+        console.log("abc");
         $timeout(function () {
             Update();
         }.bind(this), 10000);
@@ -154,6 +196,7 @@
         //setInterval(Update, 10000);
         //setInterval($scope.setTimestamps, 1000);
         //setInterval(Update($scope.data), 10000);
+        
     }
     
     angular.module('app', ['angular-chartist'])

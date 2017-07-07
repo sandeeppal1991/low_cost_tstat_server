@@ -7,6 +7,11 @@ from flask import render_template
 from flask import request
 from flask import jsonify
 
+def FtoC(f):
+    return (5/9.) * (f-32)
+
+def CtoF(c):
+    return (c*(9/5.))+32
 
 
 ######### SIMULATION SETTINGS
@@ -61,11 +66,11 @@ Coolings[:] = np.NAN
 Seeding=True
 ## THERMAL MODEL
 
-
+#TODO add ventilation action?
 #Thermal Response
 def ThermalResponce(Tin, Tout, SetPointHeating, SetPointCooling, Interval):
 	if SetPointHeating >= SetPointCooling:
-		print "Action error"
+		##print "Action error"
 		return nan
 	else:
 		if Seeding:
@@ -75,20 +80,20 @@ def ThermalResponce(Tin, Tout, SetPointHeating, SetPointCooling, Interval):
 		TempOfAirH = 30
 		TempOfAirC = 15
 		if SetPointHeating>Tin:
-			print "yo"
+			##print "yo"
 			Heating=1
 			Cooling=0
-		elif SetPointCooling>Tin:
+		elif SetPointCooling<Tin:
 			Heating=0
 			Cooling=1
 		else:
 			Heating=0
 			Cooling=0
-		print Heating,Cooling
+		##print Heating,Cooling
 		return float(Tin) + float(c[0])*(float(TempOfAirH)-float(Tin))*Heating + float(c[1])*(float(TempOfAirC)-float(Tin))*Cooling - float(c[2])*(float(Tin)-float(Tout)) + random.gauss(0, sigma), Heating, Cooling
 
 def Forward(Tin, Interval, SetPointHeating, SetPointCooling):
-   	Tin, Heating, Cooling =ThermalResponce(Tin, Touts[Interval-1], SetPointHeating, SetPointCooling, Interval)
+	Tin, Heating, Cooling =ThermalResponce(Tin, Touts[Interval-1], SetPointHeating, SetPointCooling, Interval)
 	if Interval==Intervals:
 		Interval=1
 	else:
@@ -99,7 +104,7 @@ def Forward(Tin, Interval, SetPointHeating, SetPointCooling):
 def Start():
 	TinINIT=22
 	Interval=1
-   	Tin=TinINIT
+	Tin=TinINIT
 	Tout=Touts[Interval-1]
 	return Tin, Tout, Interval
 
@@ -160,7 +165,32 @@ def dosim():
         return jsonify(data)
     if request.method == 'POST':
         data = json.loads(request.data)
+        current_temperature = FtoC(data['sensors'][0]['current'])
+        interval = 1 #1 -> 96; day divided up to 15 min interval
+        # TODO: need timestamp from tstat. Need to generate this on the client
+        # side because we could be speeding up a simulation.
+        cooling_setpoint = FtoC(data['sensors'][0]['setpoint'] + 2)
+        heating_setpoint = FtoC(data['sensors'][0]['setpoint'] - 2)
+        tin, tout, interval, heating, cooling = Forward(current_temperature, interval, heating_setpoint, cooling_setpoint)
+        print('cool',cooling_setpoint,'heat',heating_setpoint)
+        print(tin, tout, interval, heating, cooling)
+        data['sensors'][0]['current'] = CtoF(tin)
+
+        num_heating_requests = 0
+        num_cooling_requests = 0
+        for tap in data['control_interface']:
+            if tap['type'] == 'heating':
+                num_heating_requests+=len(tap['taps_since_last_post'])
+            elif tap['type'] == 'cooling':
+                num_cooling_requests+=len(tap['taps_since_last_post'])
+        setpoint_diff = num_cooling_requests - num_heating_requests
+        setpoint_diff *= 1
+        print("diff",setpoint_diff,num_heating_requests,num_cooling_requests)
+        data['sensors'][0]['setpoint'] = CtoF(FtoC(data['sensors'][0]['setpoint']) + setpoint_diff)
+
+
         print(data)
+
         data['control_interface'] = [
             {
               "taps_since_last_post": [],

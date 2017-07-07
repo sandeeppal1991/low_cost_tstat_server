@@ -21,7 +21,7 @@
 
 @font-face {
     font-family: Segoe UI Symbol;
-    src:url("/Content/fonts/glyphicons-halflings-regular.ttf");
+    src:url("/fonts/glyphicons-halflings-regular.ttf");
 }
 .circle {
     width: 100%;
